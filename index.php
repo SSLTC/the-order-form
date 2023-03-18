@@ -23,36 +23,105 @@ function whatIsHappening() {
 
 // TODO: provide some products (you may overwrite the example)
 $products = [
-    ['name' => 'Food for a hungry one', 'price' => 6],
-    ['name' => 'Shoes for a barefoot', 'price' => 45],
-    ['name' => 'Sweater or jacket for a cold one', 'price' => 39],
-    ['name' => 'Trousers for them without', 'price' => 29.9],
+    ['name' => 'Food for a hungry one', 'price' => 6, 'checked' => false],
+    ['name' => 'Shoes for someone barefoot', 'price' => 45, 'checked' => false],
+    ['name' => 'A sweater or a jacket for who has cold', 'price' => 39, 'checked' => false],
+    ['name' => 'Some trousers for the one without', 'price' => 29.9, 'checked' => false],
 ];
 
-$totalValue = 0;
+if (isset($_SESSION['Products'])) {
+    $products = $_SESSION['Products'];
+}
 
-function validate()
+$showConfirmation = false;
+
+function calculateTotalPrice($totalPrice = 0) {
+    $GLOBALS['totalValue'] = $totalPrice;
+    if ($totalPrice !== 0) {
+        return;
+    }
+    foreach ($GLOBALS['products'] as $product) {
+        if ($product['checked']) {
+            $GLOBALS['totalValue'] += $product['price'];
+        }
+    }
+}
+calculateTotalPrice();
+
+function validate(): Array
 {
     // TODO: This function will send a list of invalid fields back
-    return [];
+    $invalidInput = array();
+
+    if (empty($_SESSION['Street']) || 
+        empty($_SESSION['Streetnumber']) || 
+        empty($_SESSION['City']) || 
+        empty($_SESSION['Zipcode'])
+    ) {
+        array_push($invalidInput, "All fields are required");
+        return $invalidInput;
+    }
+
+    if (!filter_var($_SESSION['Email'], FILTER_VALIDATE_EMAIL)) {
+        array_push($invalidInput, "Invalid email format");
+    }
+
+    if (!preg_match("/^[a-zA-Z-' ]*$/", $_SESSION['Street'])) {
+        array_push($invalidInput, "Only letters and white space allowed with street<br>");
+    }
+
+    if (!preg_match("/^[a-zA-Z-' ]*$/", $_SESSION['City'])) {
+        array_push($invalidInput, "Only letters and white space allowed with city<br>");
+    }
+
+    if (!is_numeric($_SESSION['Zipcode'])) {
+        array_push($invalidInput, "Zipcode has to be numeric");
+    }
+
+    return $invalidInput;
 }
 
 function handleForm()
 {
     // TODO: form related tasks (step 1)
+    $_SESSION['Email'] = trim($_POST['email']);
+    $_SESSION['Street'] = trim($_POST['street']);
+    $_SESSION['Streetnumber'] = trim($_POST['streetnumber']);
+    $_SESSION['City'] = trim($_POST['city']);
+    $_SESSION['Zipcode'] = trim($_POST['zipcode']);
 
+    $totalPrice = 0;
+    foreach ($GLOBALS['products'] as $index => &$product) {
+        if (isset($_POST['product'][$index])) {
+            $product['checked'] = true;
+        } else {
+            $product['checked'] = false;
+        }
+
+        if ($product['checked']) {
+            $totalPrice += $product['price'];
+        }
+    }
+    calculateTotalPrice($totalPrice);
+
+    $_SESSION['Products'] = $GLOBALS['products'];
+    
     // Validation (step 2)
-    $invalidFields = validate();
-    if (!empty($invalidFields)) {
+    $GLOBALS['invalidFields'] = validate();
+    
+    if (!empty($GLOBALS['invalidFields'])) {
         // TODO: handle errors
+        $GLOBALS['alertRole'] = "alert-danger";
+        $GLOBALS['showConfirmation'] = true;
     } else {
         // TODO: handle successful submission
+        $GLOBALS['alertRole'] = "alert-success";
+        $GLOBALS['showConfirmation'] = true;
     }
 }
 
 // TODO: replace this if by an actual check
-$formSubmitted = false;
-if ($formSubmitted) {
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
     handleForm();
 }
 
